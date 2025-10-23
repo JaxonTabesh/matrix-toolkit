@@ -11,43 +11,58 @@ class Matrix {
   friend class Matrix;
 
  private:
-  std::vector<std::vector<T>> values;
   size_t rows, cols;
+  std::vector<std::vector<T>> values;
+
+  // operator()
+  // private, modifiable
+  T& operator()(size_t i, size_t j) {
+    if (i >= rows || j >= cols) {
+      throw std::out_of_range("Your indexes are out of bounds.");
+    }
+    return values[i][j];
+  }
 
  public:
   Matrix(size_t rows, size_t cols)
-      : rows(rows),
-        cols(cols),
-        values(values =
-                   std::vector<std::vector<T>>(rows, std::vector<T>(cols, 0))) {
-  }
+      : rows(rows), cols(cols), values(rows, std::vector<T>(cols, 0)) {}
   Matrix(size_t rows, size_t cols, T defNum)
-      : rows(rows),
-        cols(cols),
-        values(
-            std::vector<std::vector<T>>(rows, std::vector<T>(cols, defNum))) {}
+      : rows(rows), cols(cols), values(rows, std::vector<T>(cols, defNum)) {}
   template <typename U>
   Matrix(const Matrix<U>& other)
       : rows(other.getRows()),
         cols(other.getCols()),
-        values(std::vector<std::vector<T>>(rows, std::vector<T>(cols, 0))) {
+        values(rows, std::vector<T>(cols, 0)) {
     for (size_t i = 0; i < rows; i++) {
       for (size_t j = 0; j < cols; j++) {
-        values[i][j] = static_cast<T>(other.get(i, j));
+        (*this)(i, j) = static_cast<T>(other(i, j));
       }
     }
+  }
+
+  static Matrix<T> multiplication(const Matrix<T>& matrixLeft,
+                                  const Matrix<T>& matrixRight) {
+    if (matrixLeft.getCols() != matrixRight.getRows())
+      throw std::invalid_argument(
+          "The number of columns of the left matrix needs to equal the number "
+          "of rows of the right matrix.");
+    size_t m = matrixLeft.getRows();
+    size_t p = matrixRight.getCols();
+    size_t n = matrixLeft.getCols();
+    Matrix<T> res(m, p, 0);
+    for (size_t i = 0; i < m; i++) {
+      for (size_t j = 0; j < p; j++) {
+        for (size_t k = 0; k < n; k++) {
+          res(i, j) += matrixLeft(i, k) * matrixRight(k, j);
+        }
+      }
+    }
+    return res;
   }
 
   size_t getRows() const { return rows; }
 
   size_t getCols() const { return cols; }
-
-  T get(size_t i, size_t j) const {
-    if (i >= rows || j >= cols) {
-      throw std::invalid_argument("Your indexes are out of bounds.");
-    }
-    return values[i][j];
-  }
 
   std::string toString() const {
     std::ostringstream oss;
@@ -73,7 +88,7 @@ class Matrix {
     Matrix<R> res(rows, cols);
     for (size_t i = 0; i < rows; i++) {
       for (size_t j = 0; j < cols; j++) {
-        res.values[i][j] = values[i][j] + other.values[i][j];
+        res(i, j) = (*this)(i, j) + other(i, j);
       }
     }
     return res;
@@ -91,13 +106,14 @@ class Matrix {
     Matrix<R> res(rows, cols);
     for (size_t i = 0; i < rows; i++) {
       for (size_t j = 0; j < cols; j++) {
-        res.values[i][j] = values[i][j] - other.values[i][j];
+        res(i, j) = (*this)(i, j) - other(i, j);
       }
     }
     return res;
   }
 
   // operator* promotes the type
+  // Scalar multiplication
   template <typename U>
   Matrix<decltype(std::declval<T>() * std::declval<U>())> operator*(
       const U scalar) const {
@@ -105,13 +121,14 @@ class Matrix {
     Matrix<R> res(rows, cols);
     for (size_t i = 0; i < rows; i++) {
       for (size_t j = 0; j < cols; j++) {
-        res.values[i][j] = values[i][j] * scalar;
+        res(i, j) = (*this)(i, j) * scalar;
       }
     }
     return res;
   }
 
   // operator* promotes the type
+  // Scalar multiplication
   template <typename U>
   friend Matrix<decltype(std::declval<U>() * std::declval<T>())> operator*(
       const U scalar, const Matrix<T>& mat) {
@@ -119,7 +136,7 @@ class Matrix {
     Matrix<R> res(mat.rows, mat.cols);
     for (size_t i = 0; i < mat.rows; i++) {
       for (size_t j = 0; j < mat.cols; j++) {
-        res.values[i][j] = mat.values[i][j] * scalar;
+        res(i, j) = mat(i, j) * scalar;
       }
     }
     return res;
@@ -132,7 +149,7 @@ class Matrix {
     }
     for (size_t i = 0; i < rows; i++) {
       for (size_t j = 0; j < cols; j++) {
-        values[i][j] += other.values[i][j];
+        (*this)(i, j) += other(i, j);
       }
     }
     return *this;
@@ -146,10 +163,19 @@ class Matrix {
     }
     for (size_t i = 0; i < rows; i++) {
       for (size_t j = 0; j < cols; j++) {
-        values[i][j] -= other.values[i][j];
+        (*this)(i, j) -= other(i, j);
       }
     }
     return *this;
+  }
+
+  // operator()
+  // public, read-only
+  const T& operator()(size_t i, size_t j) const {
+    if (i >= rows || j >= cols) {
+      throw std::out_of_range("Your indexes are out of bounds.");
+    }
+    return values[i][j];
   }
 };
 
